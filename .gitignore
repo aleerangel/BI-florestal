@@ -1,9 +1,15 @@
 # Dados privados da empresa (não versionar)
 dados_florestais_brutos/
+dados/processados/
+dados/privados/
+dw/*.duckdb
+dw/*.duckdb.wal
 *.xlsx
 *.xls
 *.xlsm
 *.csv
+!dados/publicos/*.csv
+!docs/*.csv
 *.parquet
 *.db
 *.sqlite
