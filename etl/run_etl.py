@@ -367,10 +367,11 @@ def gerar_dataset_ml(
     df_inv: pd.DataFrame,
     df_clima: pd.DataFrame,
     caminho_saida_ml: Path,
-) -> pd.DataFrame:
-    """Agrega parcelas, pareia medições (t1 -> t2) e integra clima para ML."""
+) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Agrega parcelas, corrige viés de amostragem de volume, pareia (t1->t2) e integra clima."""
     df_vivos = df_inv[(df_inv["DAP"] > 0) & (df_inv["AreaCorr"] > 0)].copy()
     df_vivos["g_fuste"] = np.pi * ((df_vivos["DAP"] / 100.0) ** 2) / 4.0
+    df_vivos["g_com_vol"] = np.where(df_vivos["Volume_m3"].notna(), df_vivos["g_fuste"], 0.0)
 
     # Agregação por campanha/parcela
     chaves_parcela = ["PROJETO", "COD_TALHAO", "TALHAO", "Parcela", "Data_Medicao", "ANO_IFC"]
@@ -390,9 +391,18 @@ def gerar_dataset_ml(
             alt_media=("AltObs", lambda s: s[s > 0].mean() if (s > 0).any() else np.nan),
             hd=("AltObs", lambda s: s[s > 0].quantile(0.8) if (s > 0).any() else np.nan),
             ba_parcela=("g_fuste", "sum"),
-            vol_parcela=("Volume_m3", "sum"),
+            ba_com_vol=("g_com_vol", "sum"),
+            vol_parcela_medido=("Volume_m3", "sum"),
             n_vol_medido=("Volume_m3", lambda s: s.notna().sum()),
         )
+    )
+
+    # Expansão do volume total da parcela proporcional à área basal medida
+    # (corrige o viés entre 2006-2010, com ~30% das árvores cubadas, e 2011-2012, com >90%)
+    agreg["vol_parcela"] = np.where(
+        agreg["ba_com_vol"] > 0,
+        agreg["vol_parcela_medido"] * (agreg["ba_parcela"] / agreg["ba_com_vol"]),
+        np.nan,
     )
 
     fator_ha = 10000.0 / agreg["AreaCorr"]
@@ -408,6 +418,7 @@ def gerar_dataset_ml(
 
     # Pareamento consecutivo t1 -> t2 dentro da mesma parcela e rotação
     pares: list[dict[str, object]] = []
+    pares_filtrados_outlier = 0
     for (_, _, _), grupo in agreg.groupby(["PROJETO", "TALHAO", "Parcela"]):
         if len(grupo) < 2:
             continue
@@ -417,6 +428,11 @@ def gerar_dataset_ml(
             r2 = grupo.iloc[i + 1]
             dt_meses = float(r2["IDADE"] - r1["IDADE"])
             if dt_meses <= 0 or r2["ROT"] != r1["ROT"]:
+                continue
+
+            sobrevivencia = float((r2["nha"] / r1["nha"]) * 100.0) if r1["nha"] > 0 else np.nan
+            if not (6.0 <= dt_meses <= 24.0) or (pd.notna(sobrevivencia) and sobrevivencia > 120.0):
+                pares_filtrados_outlier += 1
                 continue
 
             # Clima agregado exatamente entre Data_Medicao_1 e Data_Medicao_2
@@ -432,7 +448,6 @@ def gerar_dataset_ml(
             ima1 = float(r1["volumeha"] / (r1["IDADE"] / 12.0)) if r1["IDADE"] > 0 else np.nan
             ima2 = float(r2["volumeha"] / (r2["IDADE"] / 12.0)) if r2["IDADE"] > 0 else np.nan
             ica = float((r2["volumeha"] - r1["volumeha"]) / (dt_meses / 12.0))
-            sobrevivencia = float((r2["nha"] / r1["nha"]) * 100.0) if r1["nha"] > 0 else np.nan
 
             pares.append(
                 {
@@ -479,13 +494,18 @@ def gerar_dataset_ml(
     df_ml = pd.DataFrame(pares)
     caminho_saida_ml.parent.mkdir(parents=True, exist_ok=True)
     df_ml.to_csv(caminho_saida_ml, index=False)
-    return df_ml
+    resumo_ml = {
+        "pares_validos": len(df_ml),
+        "pares_filtrados_outlier": pares_filtrados_outlier,
+    }
+    return df_ml, resumo_ml
 
 
 def gerar_relatorio_etl(
     resumo_ifc: dict[str, object],
     contagens_dw: dict[str, int],
     df_ml: pd.DataFrame,
+    resumo_ml: dict[str, int],
     caminho_relatorio: Path,
 ) -> None:
     """Registra resumo executivo e exemplos antes/depois das transformações."""
@@ -535,9 +555,19 @@ def gerar_relatorio_etl(
 
 ## 4. Dataset Mestre para Machine Learning (`dataset_ml_prognose.csv`)
 
-- **Total de pares de medição (`t1 -> t2`):** {len(df_ml):,}
+- **Total de pares válidos de medição (`t1 -> t2`):** {resumo_ml['pares_validos']:,}
+- **Pares filtrados por intervalo atípico (`dt_meses` fora de `[6, 24]`) ou sobrevivência `> 120%`:** {resumo_ml['pares_filtrados_outlier']:,}
 - **Projetos distintos nos pares:** {df_ml['PROJETO'].nunique() if not df_ml.empty else 0}
 - **Variáveis climáticas integradas no intervalo exato `[t1, t2]`:** `pr_acum`, `et_acum`, `balanco_hidrico`, `tmax_media`, `tmin_media`, `rh_media`, `rs_media`, `u2_media`.
+
+---
+
+## 5. Dificuldades Encontradas e Soluções Adotadas
+
+1. **Unidade da Evapotranspiração (`ET`) no BR-DWGD:** na coleção `BR-DWGD_Monthly`, a banda `ET` representa a média diária (`mm/dia`), enquanto `pr` representa o acumulado mensal (`mm/mês`). *Solução:* multiplicou-se `ET` por `days_in_month` no ETL para obter `mm/mês` reais e evitar balanço hídrico artificialmente positivo.
+2. **Viés de amostragem de altura/volume entre campanhas (`2006–2010` vs `2011–2012`):** nos anos iniciais, apenas ~25–30% das árvores possuíam `AltObs` e `Volume (m³)` medidos; em `2011–2012`, mais de 92% possuíam. *Solução:* na agregação por parcela para ML, o volume total foi expandido proporcionalmente à área basal medida (`vol_medido * (ba_total / ba_com_vol)`).
+3. **Heterogeneidade das planilhas anuais:** datas em três formatos distintos (`Timestamp`, serial Excel e texto `DD/MM/YYYY`), abas extras em `2008` (`Plan2`, `Coefs`), erros `#NUM!` em árvores com `DAP=0` e `ESPACAMENTO` presente apenas em `2012`. *Solução:* parser unificado (`parse_data_mista`), leitura explícita da aba `Plan1`, coerção segura de numéricos e propagação relacional de espaçamento por `(PROJETO, COD_TALHAO)`.
+4. **Variação de `Area`/`AreaCorr` e grafia de projetos entre anos:** pequenas diferenças cadastrais impediam a junção direta na `Dim_Localizacao` e no cruzamento com `Fato_Clima`. *Solução:* normalização canônica de `PROJETO` (`Água Branca`, `Homéro`, `J. Leôncio`) e agregação determinística da dimensão por `(PROJETO, COD_TALHAO, TALHAO, Parcela)`.
 """
     caminho_relatorio.parent.mkdir(parents=True, exist_ok=True)
     caminho_relatorio.write_text(conteudo, encoding="utf-8")
@@ -568,9 +598,9 @@ def main() -> None:
     contagens_dw = construir_e_carregar_dw(df_inv, df_clima, args.schema_sql, args.db_path)
 
     print("4/4 Gerando pares de medição e dataset mestre para ML...")
-    df_ml = gerar_dataset_ml(df_inv, df_clima, args.ml_csv)
+    df_ml, resumo_ml = gerar_dataset_ml(df_inv, df_clima, args.ml_csv)
 
-    gerar_relatorio_etl(resumo_ifc, contagens_dw, df_ml, args.report_md)
+    gerar_relatorio_etl(resumo_ifc, contagens_dw, df_ml, resumo_ml, args.report_md)
     print(f"ETL concluído! DW: {args.db_path} | ML CSV: {args.ml_csv} ({len(df_ml)} pares)")
 
 
