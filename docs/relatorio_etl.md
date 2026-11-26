@@ -53,7 +53,9 @@
 - **Total de pares válidos de medição (`t1 -> t2`):** 3,262
 - **Pares filtrados por intervalo atípico (`dt_meses` fora de `[6, 24]`) ou sobrevivência `> 120%`:** 59
 - **Projetos distintos nos pares:** 88
-- **Variáveis climáticas integradas no intervalo exato `[t1, t2]`:** `pr_acum`, `et_acum`, `balanco_hidrico`, `tmax_media`, `tmin_media`, `rh_media`, `rs_media`, `u2_media`.
+- **Total de colunas no dataset enriquecido:** 100
+- **Enriquecimento biométrico (`t1 -> t2`):** `invid2` ($1/I_2$), `razao_idade` ($I_1/I_2$), `dap_min1`, `ht_min1`, `ht_max1`, `ln_ba1`, `ln_volumeha1`, `ln_volumeha2`.
+- **Enriquecimento agroclimático:** variáveis no intervalo exato `[t1, t2]` (`pr_acum`, `et_acum`, `balanco_hidrico`, `indice_umidade`, `tmax_media`, `tmin_media`, `tmed_media`, `dtr_media`, `rh_media`, `vpd_media` via Tetens/FAO-56, `rs_media`, `u2_media`, `razao_agua_radiacao`), além dos respectivos blocos anuais (`*_1`, `*_2`), diferenças (`delta_*`) e médias (`media_*`) entre `ano1` e `ano2`.
 
 ---
 
