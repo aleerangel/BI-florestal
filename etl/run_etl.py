@@ -194,7 +194,7 @@ def extrair_e_padronizar_ifc(pasta_brutos: Path) -> tuple[pd.DataFrame, dict[str
 
 
 def carregar_clima(caminho_clima: Path) -> pd.DataFrame:
-    """Lê a série mensal BR-DWGD e padroniza o nome do projeto."""
+    """Lê a série mensal BR-DWGD, padroniza projeto e converte ET para mm/mês."""
     if not caminho_clima.exists():
         raise FileNotFoundError(f"Arquivo climático não encontrado: {caminho_clima}")
     df_clima = pd.read_csv(caminho_clima)
@@ -202,6 +202,9 @@ def carregar_clima(caminho_clima: Path) -> pd.DataFrame:
     df_clima["Data_Medicao"] = pd.to_datetime(df_clima["Data"])
     df_clima["Ano"] = df_clima["Ano"].astype(int)
     df_clima["Mes"] = df_clima["Mes"].astype(int)
+    # Na coleção BR-DWGD_Monthly, ET representa média diária (mm/dia);
+    # multiplicamos pelos dias do mês para alinhar com pr (mm/mês).
+    df_clima["ET"] = pd.to_numeric(df_clima["ET"], errors="coerce") * df_clima["Data_Medicao"].dt.days_in_month
     # Caso dois nomes de projeto tenham sido unificados (ex: Agua Branca / Água Branca),
     # mantém um registro por (PROJETO, Ano, Mes).
     df_clima = (
