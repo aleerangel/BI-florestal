@@ -1,0 +1,23 @@
+# Dados privados da empresa (não versionar)
+dados_florestais_brutos/
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.parquet
+*.db
+*.sqlite
+*.sqlite3
+
+# Ambiente e segredos
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
