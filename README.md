@@ -97,7 +97,6 @@ BI-florestal/
 ├── .gitignore                          # Regras de exclusão (dados privados, .venv, DuckDB, etc.)
 ├── README.md                           # Documentação principal do projeto
 ├── requirements.txt                    # Dependências Python (inclui experimental-ml-framework)
-├── Proposta_BI.pdf                     # Apresentação da Etapa 1
 ├── Trabalho 01-Arquitetura de BI.pdf   # Enunciado oficial do trabalho
 ├── modelo_estrela.pdf                  # Diagrama do modelo multidimensional (constelação de fatos)
 ├── dados_florestais_brutos/            # [IGNORADO NO GIT] Planilhas privadas do IFC (2006–2012)
@@ -117,7 +116,9 @@ BI-florestal/
 ├── ml/                                 # [Etapa 3 / ML] Experimentos com experimental-ml-framework
 ├── dashboards/                         # [Etapa 3 / BI] Dashboards gerenciais conectados ao DuckDB
 └── docs/
-    └── relatorio_etl.md                # Relatório auditável (antes × depois, carga e dificuldades)
+    ├── Proposta_BI.pdf                    # Apresentação da Etapa 1
+    ├── apresentacao_etapa2.html           # Slides da apresentação da Etapa 2 (ETL & DW)
+    └── relatorio_etl.md                   # Relatório auditável (antes × depois, carga e dificuldades)
 ```
 
 ---
