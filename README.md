@@ -58,7 +58,7 @@ Projeto prático da disciplina **COM11075 – Tópicos Especiais em BD II** (UFE
 
 ### Fluxo da Arquitetura
 1. **Fontes:** Planilhas IFC privadas (`.xlsx`) + série climática BR-DWGD extraída via Google Earth Engine (`.csv`) + tabela de coordenadas dos talhões.
-2. **ETL / ELT (`Python` + `experimental-ml-framework` + `Pandas`):** limpeza, padronização de datas e decimais, tratamento de nulos/outliers, geração de chaves substitutas (`SK_*`), integração espaço-temporal e registro de transformações (antes/depois).
+2. **ETL (`Python` + `Pandas` + `NumPy`):** limpeza, padronização de datas e decimais, tratamento de nulos/outliers, geração de chaves substitutas (`SK_*`), integração espaço-temporal, enriquecimento biométrico/agroclimático e carga no DuckDB.
 3. **Armazenamento:**
    - **Data Warehouse (`DuckDB`):** constelação de fatos com `5` dimensões e `2` tabelas fato.
    - **Datasets para ML (`CSV`):** bases tratadas para treinamento e avaliação de modelos preditivos.
@@ -82,7 +82,7 @@ Projeto prático da disciplina **COM11075 – Tópicos Especiais em BD II** (UFE
 ## 5. Tecnologias Empregadas
 
 - **Linguagem:** Python (`3.15+`)
-- **ETL & Análise de Dados:** `pandas`, `numpy`, `openpyxl`, `experimental-ml-framework`
+- **ETL & Análise de Dados:** `pandas`, `numpy`, `openpyxl`
 - **Extração Climática:** `earthengine-api` (Google Earth Engine)
 - **Data Warehouse (SGBD):** `DuckDB`
 - **Machine Learning:** `scikit-learn`, `experimental-ml-framework`

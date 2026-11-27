@@ -1,9 +1,3 @@
--- ============================================================================
--- CONSULTAS ANALÍTICAS PARA APRESENTAÇÃO EM AULA (DuckDB / DBeaver)
--- Banco: dw/bi_florestal.duckdb
--- Dica no DBeaver: posicione o cursor em uma query e aperte Ctrl+Enter,
---                  ou aperte Alt+X para executar todas em sequência.
--- ============================================================================
 
 -- 1. Auditoria de Carga: contagem de registros em todas as dimensões e fatos
 SELECT 'Dim_Tempo' AS tabela, COUNT(*) AS registros FROM Dim_Tempo
