@@ -34,7 +34,24 @@
 
 ---
 
-## 3. Carga do Data Warehouse (DuckDB)
+## 3. Mapeamento Origem → Destino (Linhagem dos Atributos)
+
+| Origem (Bruto) | Transformação Aplicada | Destino no DW / ML |
+|---|---|---|
+| `MedInicio` (IFC) e `Data`, `Ano`, `Mes` (BR-DWGD) | Parse unificado (`parse_data_mista`) para `DATE` ISO + extração de `Ano` e `Mes` | `Dim_Tempo` (`Data_Medicao`, `Ano`, `Mes`) |
+| `ANO IFC` (IFC) | Coerção para `Int64` | `Dim_Tempo` (`Ano_IFC`) |
+| `DATA_PLANTIO` + `IDADE` (IFC) | Recálculo de `IDADE` quando ausente + derivação de `Idade_Anos` e `Fase_Desenvolvimento` | `Dim_Idade` (`IDADE`, `Idade_Anos`, `Fase_Desenvolvimento`) |
+| `ROT`, `CICLO` (IFC) | Coerção numérica + imputação de `CICLO = 1` quando nulo (2006) | `Dim_Idade` (`ROT`, `CICLO`) |
+| `PROJETO`, `COD_TALHAO`, `TALHAO`, `Parcela`, `Area`, `AreaCorr` | Grafia canônica de `PROJETO`, `zfill(3)` em `COD_TALHAO` + linha âncora por `PROJETO` para o clima | `Dim_Localizacao` |
+| `MG`, `ESPACAMENTO` (IFC) | Limpeza de texto + propagação de `ESPACAMENTO` (de 2012) por `(PROJETO, COD_TALHAO)` | `Dim_Silvicultura` |
+| `Cova`, `Fuste`, `Fila`, `Codigos` (IFC) | Coerção para `Int64` + preenchimento de `Codigos` nulo com `'N'` | `Dim_Fuste` |
+| `DAP`, `AltObs`, `Volume (m³)` (IFC) | Coerção segura (`#NUM!` → `NULL`) + ligação com as 5 `SK_*` | `Fato_Inventario_Fuste` (`DAP`, `AltObs`, `Volume_m3`) |
+| `pr`, `ET`, `RH`, `u2`, `Rs`, `Tmax`, `Tmin` (BR-DWGD) | Conversão de `ET` (`mm/dia` → `mm/mês`) + ligação por `SK_Tempo` e `SK_Localizacao` | `Fato_Clima` |
+| Parcelas pareadas (`t1 -> t2`) + Clima no intervalo | Expansão de volume por área basal, `ima`, `ica`, `sobrevivencia_pct`, `invid2`, `ln_*` e índices (`vpd`, `dtr`, `tmed`, `indice_umidade`, `balanco_hidrico`, `razao_agua_radiacao`, `delta_*`, `media_*`) | `dataset_ml_prognose.csv` (camada ML) |
+
+---
+
+## 4. Carga do Data Warehouse (DuckDB)
 
 | Tabela | Registros Carregados |
 |---|---:|
@@ -48,7 +65,7 @@
 
 ---
 
-## 4. Dataset Mestre para Machine Learning (`dataset_ml_prognose.csv`)
+## 5. Dataset Mestre para Machine Learning (`dataset_ml_prognose.csv`)
 
 - **Total de pares válidos de medição (`t1 -> t2`):** 3,262
 - **Pares filtrados por intervalo atípico (`dt_meses` fora de `[6, 24]`) ou sobrevivência `> 120%`:** 59
@@ -59,7 +76,7 @@
 
 ---
 
-## 5. Dificuldades Encontradas e Soluções Adotadas
+## 6. Dificuldades Encontradas e Soluções Adotadas
 
 1. **Unidade da Evapotranspiração (`ET`) no BR-DWGD:** na coleção `BR-DWGD_Monthly`, a banda `ET` representa a média diária (`mm/dia`), enquanto `pr` representa o acumulado mensal (`mm/mês`). *Solução:* multiplicou-se `ET` por `days_in_month` no ETL para obter `mm/mês` reais e evitar balanço hídrico artificialmente positivo.
 2. **Viés de amostragem de altura/volume entre campanhas (`2006–2010` vs `2011–2012`):** nos anos iniciais, apenas ~25–30% das árvores possuíam `AltObs` e `Volume (m³)` medidos; em `2011–2012`, mais de 92% possuíam. *Solução:* na agregação por parcela para ML, o volume total foi expandido proporcionalmente à área basal medida (`vol_medido * (ba_total / ba_com_vol)`).
