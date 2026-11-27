@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BI Florestal — Etapa 2: Arquitetura ETL &amp; Data Warehouse</title>
+  <style>
+    :root {
+      --bg: #0b1310;
+      --surface: #12201a;
+      --surface-2: #182b23;
+      --border: #274437;
+      --text: #eef5f0;
+      --muted: #9eb7aa;
+      --accent: #34d399;
+      --accent-2: #38bdf8;
+      --warn: #fbbf24;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: #060a08;
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .deck {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .slide {
+      display: none;
+      width: min(1200px, 100%);
+      height: min(675px, calc(100vh - 90px));
+      background: radial-gradient(circle at top right, #163024 0%, var(--bg) 60%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 48px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .slide.active { display: flex; }
+
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+      margin-bottom: 22px;
+    }
+
+    .tag {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .course {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    h1 {
+      font-size: 44px;
+      line-height: 1.12;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    p, li {
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    strong { color: var(--text); }
+
+    code {
+      font-family: "JetBrains Mono", "Fira Code", monospace;
+      font-size: 0.88em;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--accent-2);
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+
+    .subtitle {
+      font-size: 20px;
+      color: var(--muted);
+      max-width: 820px;
+      margin-bottom: 28px;
+    }
+
+    .content { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+
+    .kpi {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+
+    .kpi .val {
+      font-size: 30px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .kpi .lbl { font-size: 13px; color: var(--muted); }
+
+    ul { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--accent);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(52, 211, 153, 0.06);
+    }
+
+    td { color: var(--muted); }
+    td:first-child { color: var(--text); font-weight: 600; }
+
+    .flow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .flow-box {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .flow-arrow {
+      font-size: 22px;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      margin-top: 16px;
+    }
+
+    .controls {
+      height: 54px;
+      background: #0d1612;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    button {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover { border-color: var(--accent); color: var(--accent); }
+
+    @media print {
+      body { background: #0b1310; overflow: visible; height: auto; }
+      .controls { display: none; }
+      .deck { display: block; padding: 0; }
+      .slide {
+        display: flex !important;
+        width: 100%;
+        height: 100vh;
+        page-break-after: always;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+
+    <!-- SLIDE 1: CAPA -->
+    <section class="slide active">
+      <div class="slide-header">
+        <span class="tag">Etapa 2 • ETL &amp; Data Warehouse</span>
+        <span class="course">UFES • COM11075 – Tópicos Especiais em BD II</span>
+      </div>
+      <div class="content">
+        <h1>BI Florestal &amp; Prognose de Volume<br/>Comercial de Eucalipto</h1>
+        <p class="subtitle">
+          Pipeline ETL reexecutável em Python integrando o <strong>Inventário Florestal Contínuo (IFC)</strong>
+          e dados climáticos <strong>BR-DWGD</strong> em um Data Warehouse <strong>DuckDB</strong> (Constelação de Fatos).
+        </p>
+        <div class="grid-4">
+          <div class="kpi"><div class="val">180.278</div><div class="lbl">Fustes em <code>Fato_Inventario_Fuste</code></div></div>
+          <div class="kpi"><div class="val">7.980</div><div class="lbl">Meses em <code>Fato_Clima</code></div></div>
+          <div class="kpi"><div class="val">0</div><div class="lbl">Chaves órfãs nas 7 FKs</div></div>
+          <div class="kpi"><div class="val">3.262</div><div class="lbl">Pares ML (100 variáveis)</div></div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Prof. Antonio Almeida de Barros Junior</span>
+        <span>Slide 1 / 8</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: ARQUITETURA MODULAR DO ETL -->
+    <section class="slide">
+      <div class="slide-header">
+        <span class="tag">Arquitetura do Pipeline</span>
+        <h2>Separação Modular: Extract → Transform → Load</h2>
+      </div>
+      <div class="content">
+        <div class="flow">
+          <div class="flow-box">
+            <h3>1. Extract</h3>
+            <p><code>etl/extract.py</code><br/><code>etl/extract_br_dwgd.py</code></p>
+            <ul>
+              <li>7 planilhas IFC (2006–2012)</li>
+              <li>Série mensal BR-DWGD (GEE)</li>
+              <li>Staging bruto isolado</li>
+            </ul>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">
+            <h3>2. Transform</h3>
+            <p><code>etl/transform.py</code></p>
+            <ul>
+              <li>Limpeza, datas e padronização</li>
+              <li><code>ET</code>: <code>mm/dia</code> → <code>mm/mês</code></li>
+              <li>Expansão de volume + ML CSV</li>
+            </ul>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">
+            <h3>3. Load</h3>
+            <p><code>etl/load.py</code></p>
+            <ul>
+              <li>DDL em <code>dw/schema.sql</code></li>
+              <li>5 Dimensões (<code>SK_*</code>) + 2 Fatos</li>
+              <li>Banco <code>dw/bi_florestal.duckdb</code></li>
+            </ul>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">
+            <h3>4. Validação</h3>
+            <p><code>dw/validate_dw.py</code></p>
+            <ul>
+              <li>Contagem das 7 tabelas</li>
+              <li>Checagem de chaves órfãs</li>
+              <li>Conferência de KPIs anuais</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <strong>Orquestração:</strong> <code>python etl/run_etl.py</code> executa todo o fluxo de forma idempotente (<em>full-refresh</em>), ou cada etapa pode ser executada isoladamente.
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Dados privados mantidos fora do Git (.gitignore)</span>
+        <span>Slide 2 / 8</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: EXTRAÇÃO DAS FONTES -->
+    <section class="slide">
+      <div class="slide-header">
+        <span class="tag">Etapa 1 • Extract</span>
+        <h2>Fontes de Dados Integradas (2006–2012)</h2>
+      </div>
+      <div class="content">
+        <div class="grid-2">
+          <div class="card">
+            <h3>Base Privada: IFC (Virginópolis/MG)</h3>
+            <ul>
+              <li><strong>7 arquivos</strong> anuais (<code>Virginopolis 2006.xlsx</code> a <code>2012.xlsx</code>), aba <code>Plan1</code>.</li>
+              <li><strong>180.278</strong> registros brutos de fustes/árvores.</li>
+              <li>Heterogeneidade estrutural: abas extras em 2008 (<code>Plan2</code>, <code>Coefs</code>), <code>ESPACAMENTO</code> presente apenas em 2012, datas em 3 formatos distintos.</li>
+              <li><strong>101.534</strong> fustes sem <code>AltObs</code> medida (<code>Volume_m3 = NULL</code>).</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Base Pública: BR-DWGD (GEE)</h3>
+            <ul>
+              <li>Coleção <code>BR-DWGD_Monthly</code> extraída via <strong>Google Earth Engine</strong>.</li>
+              <li><strong>98 projetos</strong> mapeados em <code>projetos_coordenadas.csv</code>.</li>
+              <li><strong>8.232</strong> registros mensais brutos (<code>pr</code>, <code>ET</code>, <code>RH</code>, <code>u2</code>, <code>Rs</code>, <code>Tmax</code>, <code>Tmin</code>).</li>
+              <li><strong>7.980</strong> registros consolidados em <code>Fato_Clima</code> após unificação canônica de projetos.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span><code>etl/extract.py</code> • <code>etl/extract_br_dwgd.py</code></span>
+        <span>Slide 3 / 8</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: TRANSFORMAÇÃO ANTES X DEPOIS -->
+    <section class="slide">
+      <div class="slide-header">
+        <span class="tag">Etapa 2 • Transform</span>
+        <h2>Tratamento e Padronização (Antes × Depois)</h2>
+      </div>
+      <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>Campo / Problema</th>
+              <th>Antes (Bruto)</th>
+              <th>Depois (Tratado)</th>
+              <th>Solução Adotada</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>DATA_PLANTIO</code> / <code>MedInicio</code></td>
+              <td><code>Timestamp</code>, serial <code>38393</code>, <code>'13/02/2005'</code></td>
+              <td><code>DATE</code> ISO (<code>YYYY-MM-DD</code>)</td>
+              <td>Parser unificado (<code>parse_data_mista</code>)</td>
+            </tr>
+            <tr>
+              <td><code>PROJETO</code></td>
+              <td><code>'Agua Branca'</code>, <code>'Homero'</code></td>
+              <td><code>'Água Branca'</code>, <code>'Homéro'</code></td>
+              <td>Normalização Unicode + mapa canônico</td>
+            </tr>
+            <tr>
+              <td><code>COD_TALHAO</code></td>
+              <td><code>'011'</code> (2006–09) vs <code>'11'</code> (2010)</td>
+              <td><code>'011'</code></td>
+              <td>Zero-padding para 3 dígitos (<code>zfill(3)</code>)</td>
+            </tr>
+            <tr>
+              <td><code>IDADE</code></td>
+              <td>Fórmula Excel / valores ausentes</td>
+              <td><code>float</code> (meses) + <code>Fase_Desenvolvimento</code></td>
+              <td>Recálculo por <code>MedInicio - DATA_PLANTIO</code></td>
+            </tr>
+            <tr>
+              <td><code>CICLO</code> &amp; <code>ESPACAMENTO</code></td>
+              <td><code>CICLO</code> nulo em 2006; espaçamento só em 2012</td>
+              <td><code>CICLO = 1</code>; espaçamento propagado</td>
+              <td>Imputação + propagação por <code>(PROJETO, COD_TALHAO)</code></td>
+            </tr>
+            <tr>
+              <td><code>Volume (m³)</code></td>
+              <td><code>'#NUM!'</code> quando <code>DAP=0</code> e <code>AltObs=0</code></td>
+              <td><code>NULL</code> (<code>NaN</code>)</td>
+              <td>Coerção numérica segura</td>
+            </tr>
+            <tr>
+              <td><code>ET</code> (BR-DWGD)</td>
+              <td>Média diária (<code>mm/dia</code>)</td>
+              <td>Acumulado mensal (<code>mm/mês</code>)</td>
+              <td>Multiplicação por <code>days_in_month</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span><code>etl/transform.py</code></span>
+        <span>Slide 4 / 8</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: MAPEAMENTO ORIGEM -> DESTINO -->
+    <section class="slide">
+      <div class="slide-header">
+        <span class="tag">Linhagem de Dados</span>
+        <h2>Mapeamento Origem → Destino (DW &amp; ML)</h2>
+      </div>
+      <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>Origem (Bruto)</th>
+              <th>Tabela / Artefato de Destino</th>
+              <th>Colunas no Destino</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>MedInicio</code>, <code>ANO IFC</code>, <code>Data</code>, <code>Ano</code>, <code>Mes</code></td>
+              <td><code>Dim_Tempo</code></td>
+              <td><code>SK_Tempo</code>, <code>Data_Medicao</code>, <code>Ano_IFC</code>, <code>Ano</code>, <code>Mes</code></td>
+            </tr>
+            <tr>
+              <td><code>DATA_PLANTIO</code>, <code>IDADE</code>, <code>ROT</code>, <code>CICLO</code></td>
+              <td><code>Dim_Idade</code></td>
+              <td><code>SK_Idade</code>, <code>IDADE</code>, <code>Idade_Anos</code>, <code>Fase_Desenvolvimento</code>, <code>ROT</code>, <code>CICLO</code></td>
+            </tr>
+            <tr>
+              <td><code>PROJETO</code>, <code>COD_TALHAO</code>, <code>TALHAO</code>, <code>Parcela</code>, <code>Area*</code></td>
+              <td><code>Dim_Localizacao</code></td>
+              <td><code>SK_Localizacao</code>, <code>PROJETO</code>, <code>COD_TALHAO</code>, <code>TALHAO</code>, <code>Parcela</code>, <code>Area</code>, <code>AreaCorr</code></td>
+            </tr>
+            <tr>
+              <td><code>MG</code>, <code>ESPACAMENTO</code></td>
+              <td><code>Dim_Silvicultura</code></td>
+              <td><code>SK_Silvicultura</code>, <code>MG</code>, <code>ESPACAMENTO</code></td>
+            </tr>
+            <tr>
+              <td><code>Cova</code>, <code>Fuste</code>, <code>Fila</code>, <code>Codigos</code></td>
+              <td><code>Dim_Fuste</code></td>
+              <td><code>SK_Fuste</code>, <code>Cova</code>, <code>Fuste</code>, <code>Fila</code>, <code>Codigos</code></td>
+            </tr>
+            <tr>
+              <td><code>DAP</code>, <code>AltObs</code>, <code>Volume (m³)</code></td>
+              <td><code>Fato_Inventario_Fuste</code></td>
+              <td>5 <code>SK_*</code> + <code>DAP</code>, <code>AltObs</code>, <code>Volume_m3</code></td>
+            </tr>
+            <tr>
+              <td><code>pr</code>, <code>ET</code>, <code>RH</code>, <code>u2</code>, <code>Rs</code>, <code>Tmax</code>, <code>Tmin</code></td>
+              <td><code>Fato_Clima</code></td>
+              <td><code>SK_Tempo</code>, <code>SK_Localizacao</code> + 7 variáveis climáticas</td>
+            </tr>
+            <tr>
+              <td>Parcelas pareadas (<code>t1 → t2</code>) + Clima</td>
+              <td><code>dataset_ml_prognose.csv</code></td>
+              <td>100 colunas (biométricas, <code>invid2</code>, <code>ln_*</code>, <code>vpd</code>, <code>dtr</code>, <code>delta_*</code>, <code>media_*</code>)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span><code>dw/schema.sql</code> • Constelação de Fatos</span>
+        <span>Slide 5 / 8</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: CARGA DUCKDB & VALIDACAO -->
+    <section class="slide">
+      <div class="slide-header">
+        <span class="tag">Etapa 3 • Load &amp; Auditoria</span>
+        <h2>Carga no Data Warehouse DuckDB e Integridade</h2>
+      </div>
+      <div class="content">
+        <div class="grid-2">
+          <div class="card">
+            <h3>Registros Carregados (<code>bi_florestal.duckdb</code>)</h3>
+            <table>
+              <thead><tr><th>Tabela</th><th>Tipo</th><th>Registros</th></tr></thead>
+              <tbody>
+                <tr><td><code>Dim_Tempo</code></td><td>Dimensão</td><td>457</td></tr>
+                <tr><td><code>Dim_Idade</code></td><td>Dimensão</td><td>1.438</td></tr>
+                <tr><td><code>Dim_Localizacao</code></td><td>Dimensão</td><td>1.908</td></tr>
+                <tr><td><code>Dim_Silvicultura</code></td><td>Dimensão</td><td>267</td></tr>
+                <tr><td><code>Dim_Fuste</code></td><td>Dimensão</td><td>1.909</td></tr>
+                <tr><td><code>Fato_Inventario_Fuste</code></td><td>Fato</td><td>180.278</td></tr>
+                <tr><td><code>Fato_Clima</code></td><td>Fato</td><td>7.980</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>Decisões de Carga &amp; Validação</h3>
+            <ul>
+              <li><strong>Ordem de carga:</strong> criação das 5 dimensões com geração de <em>Surrogate Keys</em> (<code>SK_*</code>) antes do <em>lookup</em> nos 2 fatos.</li>
+              <li><strong>Resolução de grãos:</strong> <code>Dim_Localizacao</code> cria uma <strong>linha âncora por <code>PROJETO</code></strong> para conectar <code>Fato_Clima</code> sem duplicar dados.</li>
+              <li><strong>Performance:</strong> 7 índices analíticos criados nas chaves estrangeiras dos fatos.</li>
+              <li><strong>Auditoria (<code>validate_dw.py</code>):</strong> <strong>0 chaves órfãs</strong> em todas as 7 verificações de integridade referencial.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span><code>etl/load.py</code> • <code>dw/validate_dw.py</code></span>
+        <span>Slide 6 / 8</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: ENRIQUECIMENTO ML -->
+    <section class="slide">
+      <div class="slide-header">
+        <span class="tag">Enriquecimento Analítico</span>
+        <h2>Dataset Mestre para Prognose Florestal (ML)</h2>
+      </div>
+      <div class="content">
+        <div class="grid-3">
+          <div class="kpi"><div class="val">3.262</div><div class="lbl">Pares válidos <code>t1 → t2</code> (88 projetos)</div></div>
+          <div class="kpi"><div class="val">59</div><div class="lbl">Outliers filtrados (<code>dt</code> fora de [6,24]m ou sobr. &gt;120%)</div></div>
+          <div class="kpi"><div class="val">100</div><div class="lbl">Atributos tratados e enriquecidos</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Correção de Viés &amp; Biometria</h3>
+            <ul>
+              <li>Em 2006–2010 apenas ~25–30% das árvores tinham volume medido (vs &gt;92% em 2011–2012).</li>
+              <li><strong>Solução:</strong> expansão do volume da parcela pela área basal medida: <code>vol_medido × (ba_total / ba_com_vol)</code>.</li>
+              <li>Derivadas: <code>invid2</code> (1/I₂), <code>razao_idade</code>, <code>ln_ba1</code>, <code>ln_volumeha1/2</code>, <code>ima</code>, <code>ica</code>, <code>sobrevivencia_pct</code>.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Índices Agroclimáticos (FAO-56)</h3>
+            <ul>
+              <li>Agregação exata no intervalo <code>[Data_Medicao_1, Data_Medicao_2]</code> e blocos anuais (<code>ano1</code>, <code>ano2</code>, <code>delta_*</code>, <code>media_*</code>).</li>
+              <li><code>balanco_hidrico</code> (<code>pr - ET</code>) e <code>indice_umidade</code> (<code>pr / ET</code>).</li>
+              <li><code>tmed</code>, <code>dtr</code> (amplitude térmica), <code>vpd</code> (déficit de pressão de vapor via Tetens) e <code>razao_agua_radiacao</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span><code>dados/processados/dataset_ml_prognose.csv</code></span>
+        <span>Slide 7 / 8</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: DIFICULDADES E PROXIMOS PASSOS -->
+    <section class="slide">
+      <div class="slide-header">
+        <span class="tag">Conclusão da Etapa 2</span>
+        <h2>Principais Desafios Superados &amp; Próxima Etapa</h2>
+      </div>
+      <div class="content">
+        <div class="grid-2">
+          <div class="card">
+            <h3>Desafios Encontrados e Soluções</h3>
+            <ul>
+              <li><strong>Unidade de <code>ET</code> no BR-DWGD:</strong> identificada média diária vs precipitação mensal; corrigido via <code>ET × days_in_month</code> (revelando déficits reais em 2007, 2010 e 2012).</li>
+              <li><strong>Viés de cubagem (2006–2010):</strong> mitigado via expansão proporcional por área basal.</li>
+              <li><strong>Inconsistências cadastrais:</strong> datas mistas, <code>#NUM!</code>, nomes com/sem acento e <code>ESPACAMENTO</code> ausente resolvidos de forma determinística.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Próximos Passos (Etapa 3)</h3>
+            <ul>
+              <li><strong>BI (Dashboards):</strong> conectar ferramenta de BI ao <code>dw/bi_florestal.duckdb</code> para construir os painéis gerenciais (estoque, ICA × IMA, clima e sobrevivência).</li>
+              <li><strong>ML (Prognose):</strong> executar experimentos de cenários (biométrico puro vs biométrico + clima vs <em>top features</em>) com o <code>experimental-ml-framework</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Use ← / → para navegar • Ctrl+P para exportar em PDF</span>
+        <span>Slide 8 / 8</span>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="controls">
+    <button id="prev">← Anterior</button>
+    <span id="counter">1 / 8</span>
+    <button id="next">Próximo →</button>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const counter = document.getElementById('counter');
+    let idx = 0;
+
+    function show(n) {
+      idx = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+      counter.textContent = `${idx + 1} / ${slides.length}`;
+    }
+
+    document.getElementById('prev').onclick = () => show(idx - 1);
+    document.getElementById('next').onclick = () => show(idx + 1);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') show(idx + 1);
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') show(idx - 1);
+    });
+  </script>
+</body>
+</html>
