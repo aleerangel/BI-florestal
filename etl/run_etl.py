@@ -19,7 +19,7 @@ if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
 
 from etl.extract import extrair_clima_bruto, extrair_ifc_bruto
-from etl.load import construir_e_carregar_dw, gerar_relatorio_etl
+from etl.load import construir_e_carregar_dw
 from etl.transform import gerar_dataset_ml, transformar_clima, transformar_ifc
 
 
@@ -36,26 +36,23 @@ def main() -> None:
         type=Path,
         default=_RAIZ / "dados" / "processados" / "dataset_ml_prognose.csv",
     )
-    parser.add_argument("--report-md", type=Path, default=_RAIZ / "docs" / "relatorio_etl.md")
     args = parser.parse_args()
 
-    print("1/4 [Extract] Extraindo planilhas IFC e série climática BR-DWGD...")
+    print("1/3 [Extract] Extraindo planilhas IFC e série climática BR-DWGD...")
     df_ifc_raw, resumo_extract = extrair_ifc_bruto(args.brutos_dir)
     df_clima_raw = extrair_clima_bruto(args.clima_csv)
 
-    print("2/4 [Transform] Padronizando, integrando e enriquecendo dados...")
-    df_inv, resumo_ifc = transformar_ifc(df_ifc_raw, resumo_extract)
+    print("2/3 [Transform] Padronizando, integrando e enriquecendo dados...")
+    df_inv, _ = transformar_ifc(df_ifc_raw, resumo_extract)
     df_clima = transformar_clima(df_clima_raw)
-    df_ml, resumo_ml = gerar_dataset_ml(df_inv, df_clima, args.ml_csv)
+    df_ml, _ = gerar_dataset_ml(df_inv, df_clima, args.ml_csv)
 
-    print("3/4 [Load] Construindo e populando Data Warehouse DuckDB...")
+    print("3/3 [Load] Construindo e populando Data Warehouse DuckDB...")
     contagens_dw = construir_e_carregar_dw(df_inv, df_clima, args.schema_sql, args.db_path)
 
-    print("4/4 [Report] Gerando relatório de auditoria do ETL...")
-    gerar_relatorio_etl(resumo_ifc, contagens_dw, df_ml, resumo_ml, args.report_md)
-
     print(
-        f"ETL concluído! DW: {args.db_path} | "
+        f"ETL concluído! DW: {args.db_path} ({contagens_dw['Fato_Inventario_Fuste']:,} fustes, "
+        f"{contagens_dw['Fato_Clima']:,} meses climáticos) | "
         f"ML CSV: {args.ml_csv} ({len(df_ml):,} pares, {df_ml.shape[1]} colunas)"
     )
 
