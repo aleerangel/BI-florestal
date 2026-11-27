@@ -36,18 +36,16 @@
 
 ## 3. Mapeamento Origem → Destino (Linhagem dos Atributos)
 
-| Origem (Bruto) | Transformação Aplicada | Destino no DW / ML |
+| Origem (Bruto) | Tabela / Artefato de Destino | Colunas no Destino |
 |---|---|---|
-| `MedInicio` (IFC) e `Data`, `Ano`, `Mes` (BR-DWGD) | Parse unificado (`parse_data_mista`) para `DATE` ISO + extração de `Ano` e `Mes` | `Dim_Tempo` (`Data_Medicao`, `Ano`, `Mes`) |
-| `ANO IFC` (IFC) | Coerção para `Int64` | `Dim_Tempo` (`Ano_IFC`) |
-| `DATA_PLANTIO` + `IDADE` (IFC) | Recálculo de `IDADE` quando ausente + derivação de `Idade_Anos` e `Fase_Desenvolvimento` | `Dim_Idade` (`IDADE`, `Idade_Anos`, `Fase_Desenvolvimento`) |
-| `ROT`, `CICLO` (IFC) | Coerção numérica + imputação de `CICLO = 1` quando nulo (2006) | `Dim_Idade` (`ROT`, `CICLO`) |
-| `PROJETO`, `COD_TALHAO`, `TALHAO`, `Parcela`, `Area`, `AreaCorr` | Grafia canônica de `PROJETO`, `zfill(3)` em `COD_TALHAO` + linha âncora por `PROJETO` para o clima | `Dim_Localizacao` |
-| `MG`, `ESPACAMENTO` (IFC) | Limpeza de texto + propagação de `ESPACAMENTO` (de 2012) por `(PROJETO, COD_TALHAO)` | `Dim_Silvicultura` |
-| `Cova`, `Fuste`, `Fila`, `Codigos` (IFC) | Coerção para `Int64` + preenchimento de `Codigos` nulo com `'N'` | `Dim_Fuste` |
-| `DAP`, `AltObs`, `Volume (m³)` (IFC) | Coerção segura (`#NUM!` → `NULL`) + ligação com as 5 `SK_*` | `Fato_Inventario_Fuste` (`DAP`, `AltObs`, `Volume_m3`) |
-| `pr`, `ET`, `RH`, `u2`, `Rs`, `Tmax`, `Tmin` (BR-DWGD) | Conversão de `ET` (`mm/dia` → `mm/mês`) + ligação por `SK_Tempo` e `SK_Localizacao` | `Fato_Clima` |
-| Parcelas pareadas (`t1 -> t2`) + Clima no intervalo | Expansão de volume por área basal, `ima`, `ica`, `sobrevivencia_pct`, `invid2`, `ln_*` e índices (`vpd`, `dtr`, `tmed`, `indice_umidade`, `balanco_hidrico`, `razao_agua_radiacao`, `delta_*`, `media_*`) | `dataset_ml_prognose.csv` (camada ML) |
+| `MedInicio`, `ANO IFC` (IFC) e `Data`, `Ano`, `Mes` (BR-DWGD) | `Dim_Tempo` | `SK_Tempo`, `Data_Medicao`, `Ano_IFC`, `Ano`, `Mes` |
+| `DATA_PLANTIO`, `IDADE`, `ROT`, `CICLO` (IFC) | `Dim_Idade` | `SK_Idade`, `IDADE`, `Idade_Anos`, `Fase_Desenvolvimento`, `ROT`, `CICLO` |
+| `PROJETO`, `COD_TALHAO`, `TALHAO`, `Parcela`, `Area`, `AreaCorr` | `Dim_Localizacao` | `SK_Localizacao`, `PROJETO`, `COD_TALHAO`, `TALHAO`, `Parcela`, `Area`, `AreaCorr` |
+| `MG`, `ESPACAMENTO` (IFC) | `Dim_Silvicultura` | `SK_Silvicultura`, `MG`, `ESPACAMENTO` |
+| `Cova`, `Fuste`, `Fila`, `Codigos` (IFC) | `Dim_Fuste` | `SK_Fuste`, `Cova`, `Fuste`, `Fila`, `Codigos` |
+| `DAP`, `AltObs`, `Volume (m³)` (IFC) | `Fato_Inventario_Fuste` | `SK_Tempo`, `SK_Idade`, `SK_Localizacao`, `SK_Silvicultura`, `SK_Fuste`, `DAP`, `AltObs`, `Volume_m3` |
+| `pr`, `ET`, `RH`, `u2`, `Rs`, `Tmax`, `Tmin` (BR-DWGD) | `Fato_Clima` | `SK_Tempo`, `SK_Localizacao`, `pr`, `ET`, `RH`, `u2`, `Rs`, `Tmax`, `Tmin` |
+| Parcelas pareadas (`t1 -> t2`) + Clima no intervalo | `dataset_ml_prognose.csv` | Biométricas (`volumeha*`, `ba1`, `hd1`, `nha1`, `ima*`, `ica`, `sobrevivencia_pct`, `invid2`, `ln_*`) e agroclimáticas (`balanco_hidrico`, `indice_umidade`, `tmed`, `dtr`, `vpd`, `razao_agua_radiacao`, `delta_*`, `media_*`) |
 
 ---
 
